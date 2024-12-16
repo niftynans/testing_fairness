@@ -40,26 +40,19 @@ def naive_bayes_pipeline(X, y):
 def main(args):
     dataset = args.dataset
     if dataset == 'adult':
-        adult_url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
+        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
         columns = [
             "age", "workclass", "fnlwgt", "education", "education-num", "marital-status", "occupation",
             "relationship", "race", "sex", "capital-gain", "capital-loss", "hours-per-week", "native-country", "income"
         ]
-        adult_df = pd.read_csv(adult_url, header=None, names=columns, na_values=" ?", skipinitialspace=True)
-        adult_df.dropna(inplace=True)  
-        
-        X_adult, y_adult, _ = preprocess_data(
-            adult_df, target_col="income",
-            categorical_cols=["workclass", "education", "marital-status", "occupation", "relationship", "race", "sex", "native-country"],
-            scale_numerical=True
-        )
-        print("\nAdult Dataset:")
-        naive_bayes_pipeline(X_adult, y_adult)
-
+        df = pd.read_csv(url, header=None, names=columns, na_values=" ?", skipinitialspace=True)
+        df.dropna(inplace=True)  
+        target_col = "income"
+        categorical_cols = ["workclass", "education", "marital-status", "occupation", "relationship", "race", "sex", "native-country"]
+    
     elif dataset == 'census':
-
-        census_url = "https://archive.ics.uci.edu/ml/machine-learning-databases/census-income/census-income.data"
-        census_columns = [
+        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/census-income/census-income.data"
+        columns = [
             "age", "class of worker", "industry code", "occupation code", "education", "wage per hour", "enroll in edu inst", 
             "marital status", "major industry", "major occupation", "race", "hispanic origin", "sex", "member of union", 
             "reason for unemployment", "employment status", "capital gains", "capital losses", "stock dividends", 
@@ -67,33 +60,33 @@ def main(args):
             "num person worked", "under 18", "birth country", "citizenship", "owner/renter", "veteran admin", 
             "veterans benefits", "weeks worked", "year", "income"
         ]
-        census_df = pd.read_csv(census_url, header=None, names=census_columns, na_values=" ?", skipinitialspace=True)
-        census_df.dropna(inplace=True)
-
-        X_census, y_census, _ = preprocess_data(
-            census_df, target_col="income",
-            categorical_cols=["class of worker", "education", "marital status", "major industry", "major occupation", "race", "hispanic origin", "sex", "tax filer status", "region", "state", "birth country", "citizenship"],
-            scale_numerical=True
-        )
-        print("\nCensus Dataset:")
-        naive_bayes_pipeline(X_census, y_census)
-
+        df = pd.read_csv(url, header=None, names=columns, na_values=" ?", skipinitialspace=True)
+        df.dropna(inplace=True)
+        target_col="income"
+        categorical_cols=["class of worker", "education", "marital status", "major industry", "major occupation", "race", "hispanic origin", "sex", "tax filer status", "region", "state", "birth country", "citizenship"]
+    
     else:
-        german_url = "https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data"
-        german_columns = [
+        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data"
+        columns = [
             "status", "duration", "credit history", "purpose", "amount", "savings", "employment", "installment rate", "personal status", 
             "debtors", "residence", "property", "age", "installment plans", "housing", "existing credits", "job", 
             "liable people", "telephone", "foreign worker", "credit risk"
         ]
-        german_df = pd.read_csv(german_url, header=None, delim_whitespace=True, names=german_columns)
-
-        X_german, y_german, _ = preprocess_data(
-            german_df, target_col="credit risk",
-            categorical_cols=["status", "credit history", "purpose", "savings", "employment", "personal status", "debtors", "property", "installment plans", "housing", "job", "telephone", "foreign worker"],
-            scale_numerical=True
-        )
-        print("\nGerman Credit Dataset:")
-        naive_bayes_pipeline(X_german, y_german)
+        df = pd.read_csv(url, header=None, delim_whitespace=True, names=columns)
+        target_col="credit risk"
+        categorical_cols=["status", "credit history", "purpose", "savings", "employment", "personal status", "debtors", "property", "installment plans", "housing", "job", "telephone", "foreign worker"]
+        
+    print(df.head())
+    print(target_col)
+    print(categorical_cols)
+    sys.exit()
+    X, y, _ = preprocess_data(
+        df, target_col=target_col,
+        categorical_cols=categorical_cols,
+        scale_numerical=True
+    )
+    print(f"{dataset} dataset:")
+    naive_bayes_pipeline(X, y)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
