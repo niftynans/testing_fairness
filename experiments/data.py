@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import classification_report, accuracy_score
+from ucimlrepo import fetch_ucirepo 
 
 import argparse
 import os
@@ -50,21 +51,14 @@ def main(args):
         target_col = "income"
         categorical_cols = ["workclass", "education", "marital-status", "occupation", "relationship", "race", "sex", "native-country"]
     
-    elif dataset == 'census':
-        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/census-income/census-income.data"
-        columns = [
-            "age", "class of worker", "industry code", "occupation code", "education", "wage per hour", "enroll in edu inst", 
-            "marital status", "major industry", "major occupation", "race", "hispanic origin", "sex", "member of union", 
-            "reason for unemployment", "employment status", "capital gains", "capital losses", "stock dividends", 
-            "tax filer status", "region", "state", "household family", "household summary", "instance weight", "migration", 
-            "num person worked", "under 18", "birth country", "citizenship", "owner/renter", "veteran admin", 
-            "veterans benefits", "weeks worked", "year", "income"
-        ]
-        df = pd.read_csv(url, header=None, names=columns, na_values=" ?", skipinitialspace=True)
-        df.dropna(inplace=True)
-        target_col="income"
-        categorical_cols=["class of worker", "education", "marital status", "major industry", "major occupation", "race", "hispanic origin", "sex", "tax filer status", "region", "state", "birth country", "citizenship"]
-    
+    elif dataset == 'student':
+        student_performance = fetch_ucirepo(id=320) 
+        
+        df = student_performance.data.features
+        df = pd.concat([df, student_performance.data.targets], axis=1)
+        
+        print(df) 
+
     else:
         url = "https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data"
         columns = [
@@ -72,13 +66,11 @@ def main(args):
             "debtors", "residence", "property", "age", "installment plans", "housing", "existing credits", "job", 
             "liable people", "telephone", "foreign worker", "credit risk"
         ]
-        df = pd.read_csv(url, header=None, delim_whitespace=True, names=columns)
+        df = pd.read_csv(url, header=None, sep='\s+', names=columns)
         target_col="credit risk"
         categorical_cols=["status", "credit history", "purpose", "savings", "employment", "personal status", "debtors", "property", "installment plans", "housing", "job", "telephone", "foreign worker"]
         
     print(df.head())
-    print(target_col)
-    print(categorical_cols)
     sys.exit()
     X, y, _ = preprocess_data(
         df, target_col=target_col,
@@ -92,7 +84,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser = argparse.ArgumentParser(description='Testing Fairness.')
-    parser.add_argument('--dataset', type=str, help="Name of dataset: adult, census, german", default='adult')
+    parser.add_argument('--dataset', type=str, help="Name of dataset: adult, student, german", default='adult')
     args = parser.parse_args()
 
     main(args)
