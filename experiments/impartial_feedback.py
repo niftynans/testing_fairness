@@ -1,5 +1,6 @@
 import pandas as pd
-import numpy as np 
+import numpy as np
+import random 
 from fairlearn.metrics import equalized_odds_difference
 
 from sklearn.model_selection import train_test_split
@@ -52,13 +53,32 @@ def naive_bayes_pipeline(df, target_col, categorical_cols, dataset):
 
 
 
-def get_f_0(policy, dataset, df, target_col = None, categorical_cols = None):
+def get_f_0(policy, dataset, df, target_col = None, categorical_cols = None): 
+    X, y, _ = preprocess_data( df, target_col=target_col, categorical_cols=categorical_cols, scale_numerical=True)
+
     if policy == 'bias':
-        df['f_0'] = np.where(df['sex'] == 'Male', 1, 0)
-        # df['f_0'] = np.where(df['race'] == 'White', 1, 0)
+        if dataset == 'adult':
+            feat_ind = np.array([8, 9, 13, 1])  # Protected Attribute Set
+            f_0_str = ''                        # String to output the notational version of f_0
+            thresh = random.randint(5, 50)
+            coeffs, exps = [], []
+            for i in range(len(feat_ind)):
+                if i == len(feat_ind) - 1:
+                    a = random.randint(0, 4)
+                    x = random.randint(0, 10)
+                    f_0_str += " " + str(x) + " * (" + str(df.columns[feat_ind[i]]) + ") ^ " + str(a) + "  "
+                else:
+                    a = random.randint(0, 4)
+                    x = random.randint(0, 10)
+                    f_0_str += " " + str(x) + " * (" + str(df.columns[feat_ind[i]]) + ") ^ " + str(a) + " + "
+                exps.append(a)
+                coeffs.append(x)
+            f_0_str += ' >  ' + str(thresh)
+            print(f_0_str)
+        df['f_0'] = np.where(np.sum([coeffs[i] * df[df.columns[feat_ind[i]]] ** exps[i] for i in range(len(feat_ind))], axis=0) > thresh, 1,0)
+        print(Counter(df['f_0']))
 
     elif policy == 'cluster':
-        X, y, _ = preprocess_data( df, target_col=target_col, categorical_cols=categorical_cols, scale_numerical=True)
         km = sklearn.cluster.KMeans(n_clusters=2)
         km.fit(X)
         labels = km.labels_
@@ -70,12 +90,10 @@ def get_f_0(policy, dataset, df, target_col = None, categorical_cols = None):
     else:
         if dataset == 'adult':
             df['f_0'] = np.where(df[target_col] == '>50K', 1, 0)
-        elif dataset == 'student':
+        elif dataset == 'law':
             df['f_0'] = np.where(df[target_col] >= 10, 1, 0)            
+    
     return df
-
-
-# Online Data Generator
 
 def get_eo_diff(df, dataset, A, alpha):
     if dataset == 'adult':
@@ -91,7 +109,7 @@ def get_eo_diff(df, dataset, A, alpha):
     print(f"H0 : eo_diff = 0  |  H1 : eo_diff > {alpha}")
     print(f"Equalized Odds Difference: {eo_diff}")
     
-    if eo_diff == 0:
+    if eo_diff == 0: # less than epsilon 1e-3, alpha = 0.1 or something
         print("H0 validated.")
     elif eo_diff > alpha:
         print("H1 validated.")
@@ -105,75 +123,35 @@ def main(args):
     
     if dataset == 'adult':
         url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
-        columns = [
-            "age", "workclass", "fnlwgt", "education", "education-num", "marital-status", "occupation",
-            "relationship", "race", "sex", "capital-gain", "capital-loss", "hours-per-week", "native-country", "income"
-        ]
+        columns = [ "age", "workclass", "fnlwgt", "education", "education-num", "marital-status", "occupation", "relationship", "race", "sex", "capital-gain", "capital-loss", "hours-per-week", "native-country", "income"]
+        
         df = pd.read_csv(url, header=None, names=columns, na_values=" ?", skipinitialspace=True)
         df.dropna(inplace=True)  
+        
         target_col = "income"
         categorical_cols = ["workclass", "education", "marital-status", "occupation", "relationship", "race", "sex", "native-country"]
     
         df = get_f_0(policy, dataset, df, target_col=target_col, categorical_cols=categorical_cols)        
-        
         A = 'sex' # protected attribute
-        # get_eo_diff(df, dataset, A, alpha)
+        get_eo_diff(df, dataset, A, alpha) # tells whether f_0 is fair or not.
         
-        # learn f_0
-        model = naive_bayes_pipeline(df, target_col, categorical_cols, dataset)
-        print(model)
-        # Perform Sampling, apply our algorithm
-        # get_eo_diff(new_df, dataset, A, alpha)
         
-    elif dataset == 'student':
-        student_performance = fetch_ucirepo(id=320) 
-        df = student_performance.data.features
-        df = pd.concat([df, student_performance.data.targets], axis=1)
-        
-        target_col = 'G3'
-        categorical_cols = ["school", "sex", "address", "famsize", "Pstatus", "schoolsup", "famsup", "paid", 
-                        "activities", "nursery", "higher", "internet", "romantic",  "Mjob", "Fjob", "reason", "guardian"]
-        
-        df = get_f_0(policy, dataset, df, target_col=target_col, categorical_cols=categorical_cols)        
-        
-        A = 'sex'
-        # get_eo_diff(df, dataset, A, alpha)
-        # Perform Sampling, apply our algorithm
-        # get_eo_diff(new_df, dataset, A, alpha)
-        model = naive_bayes_pipeline(df, "f_0", categorical_cols, dataset)
-        print(model)
-        
-    
-    elif dataset == 'law':
+    if dataset == 'law':
         df = pd.read_csv('../data/law_school/law_school_clean.csv')
         target_col = "pass_bar"
         categorical_cols = ["fam_inc", "tier", "race"]
         df['f_0'] = target_col
         model = naive_bayes_pipeline(df, "f_0", categorical_cols, dataset)
         print(model)
-        
 
-    else:
-        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data"
-        columns = [
-            "status", "duration", "credit history", "purpose", "amount", "savings", "employment", "installment rate", "personal status", 
-            "debtors", "residence", "property", "age", "installment plans", "housing", "existing credits", "job", 
-            "liable people", "telephone", "foreign worker", "credit risk"
-        ]
-        df = pd.read_csv(url, header=None, sep='\s+', names=columns)
-        target_col="credit risk"
-        categorical_cols=["status", "credit history", "purpose", "savings", "employment", "personal status", "debtors", "property", "installment plans", "housing", "job", "telephone", "foreign worker"]
-        df['f_0'] = target_col
-        model = naive_bayes_pipeline(df, "f_0", categorical_cols, dataset)
-        print(model)
-        
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser = argparse.ArgumentParser(description='Testing Fairness.')
-    parser.add_argument('--dataset', type=str, help="Name of dataset: adult, student, law, german", default='adult')
+    parser.add_argument('--dataset', type=str, help="Name of dataset: adult, law", default='adult')
     parser.add_argument('--policy', type=str, help="Name of audit policy: bias, cluster, random, outcome", default='bias')
-    parser.add_argument('--alpha', type=str, help="Alternate Hypothesis Constant, alpha", default='0.05')
+    parser.add_argument('--alpha', type=str, help="Alternate Hypothesis Constant, alpha", default='0.10')
 
     args = parser.parse_args()
 
