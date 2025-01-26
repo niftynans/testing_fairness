@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import sys
 
-df = pd.read_csv("../results/test.csv")
+df = pd.read_csv("../results/adult_eo_vals.csv")
 i = 0
 for group in df['f_0'].unique():
     subset = df[df['f_0'] == group]  
